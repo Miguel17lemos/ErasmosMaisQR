@@ -3,70 +3,713 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>ErasmosMaisQR</title>
     <script src="./node_modules/html5-qrcode/html5-qrcode.min.js"></script>
 </head>
 <body>
     
     <style>
+        body
+        {
+            background-color: #4682B4;
+        }
+
         main {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
         }
-        #reader {
-            width: 600px;
+
+        .basebox
+        {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 95%;
+            max-width: 700px;
+            min-width: 200px;
+            background: #FFFFFF;
+            border-radius: 20px;
+            padding: 10px;
+            margin-bottom: 10px;            
         }
-        #result {
-            text-align: center;
-            font-size: 1.5rem;
+        
+
+        .logo
+        {
+            height: 35px;
         }
+
+
+        .lin
+        {
+            justify-content: flex-start;
+            align-items: start;
+        }
+
+        .lin_title
+        {
+            color: #FF4081;
+            font-size: 20px;
+        }
+        
+        .switch
+        {
+            margin-top: 5px;
+        }
+
+        #readerCam 
+        {
+            margin-top: 5px;
+            width: 100%;
+            border-radius: 20px;            
+        }
+          
+
+        #readerManual
+        {
+            width: 100%;
+            padding: 12px 20px;
+            margin: 10px 0px 10px 0px;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size:24px;            
+        }
+
+
+        #result_color, #result
+        {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 10px;
+            border-radius: 20px;
+            background: #FF4081;            
+        }
+
+
+
+        #result
+        {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: #FFFFFF;
+        }
+
+
+        #result_user
+        {
+            font-size: 20px;
+        }
+
+        #result_type
+        {
+            margin-top: 5px;
+        }
+
+
+        ul
+        {
+            box-sizing: border-box;
+            width: 100%;
+            overflow:scroll;
+            height:100px;
+        }        
     </style>
     
 
+
+
+
+
     <main>
-        <div id="reader"></div>
-        <div id="result"></div>
+        <div class="basebox">
+            
+            <img class="logo" src="https://www.juventude.pt/img/layout/logo.png?20220812" alt="Italian Trulli">
+            
+        </div>
+        
+        <div class="basebox lin">
+            <span class="lin_title">Registo</span>
+            <div class="switch">
+                <input id="cbUsaCamara" type="checkbox">
+                <span >Usar Camara</span>
+            </div>
+
+            <div id="readerCam"></div>
+            
+            <input id="readerManual" type="text" placeholder="Leitura por email">
+            
+            <div id="result_color">
+                <div id="result">
+                    <span id="result_user">Nome Utilizador</span>
+                    <span id="result_type">Tipo</span>
+                </div>
+            </div>            
+        </div>
+
+
+
+
+        <div class="basebox lin">
+            <span class="lin_title">Totais</span>
+            <ul id="ul_total"></ul>  
+        </div>
+
+
+        <div class="basebox lin">
+            <span class="lin_title">Histórico</span>
+            <ul id="ul_hist"></ul>  
+        </div>
+        
+                
     </main>
 
 
 
-    <script>
 
-        const scanner = new Html5QrcodeScanner('reader', { 
-            // Scanner will be initialized in DOM inside element with id of 'reader'
+
+
+
+
+
+    <script>
+        const xtbReader = document.getElementById("readerManual");        
+        const scanner = new Html5QrcodeScanner('readerCam', { 
+            // Scanner will be initialized in DOM inside element with id of 'readerCam'
             qrbox: {
                 width: 250,
                 height: 250,
-            },  // Sets dimensions of scanning box (set relative to reader element width)
+            },  // Sets dimensions of scanning box (set relative to readerCam element width)
             fps: 20, // Frames per second to attempt a scan
         });
-    
-    
-        scanner.render(success, error);
-        // Starts scanner
-    
-        function success(result) {
-    
-            document.getElementById('result').innerHTML = `
-            <h2>Success!</h2>
-            <p><a href="${result}">${result}</a></p>
-            `;
-            // Prints result as a link inside result element
-    
-            scanner.clear();
-            // Clears scanning instance
-    
-            document.getElementById('reader').remove();
-            // Removes reader element from DOM since no longer needed
+        const xResultColor = document.getElementById("result_color");
+        const xResultUser = document.getElementById("result_user");
+        const xResultType = document.getElementById("result_type");
         
-        }
+        const xListaTotal = document.getElementById("ul_total");
+        const xListaHist = document.getElementById("ul_hist");
+        const xCbUsaCamara = document.getElementById("cbUsaCamara");
     
+    
+
+        Proc_Init_Reg();
+        Proc_Carrega_Totais();
+        Proc_Carrega_Hist();
+
+
+        xCbUsaCamara.onchange = function(e)
+        {                        
+            Proc_Init_Reg(e.target.checked);
+        }
+
+        
+
+        xtbReader.addEventListener('keydown', function(event) 
+        {
+            if (event.key === 'Enter') 
+            {                
+                Proc_Valida(xtbReader.value.trim().toLowerCase(), "UserEmail");
+            }
+        });
+
+
+
+
+
+
+        function Proc_Init_Reg(p_UsaCamara)
+        {
+            xtbReader.style.display = p_UsaCamara ? "none" : "block";
+            xResultColor.style.display = "none";
+                        
+            if(p_UsaCamara)
+            {
+                scanner.render(success, error);
+            }
+            else
+            {
+                scanner.clear();
+                xtbReader.value = "";
+                xtbReader.focus();
+            }  
+        }
+
+
+
+
+
+
+
+
+        function Proc_Carrega_Totais() 
+        {
+            fetch("https://api.baserow.io/api/database/rows/table/316163/?user_field_names=true&size=10",
+                {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Token Kaljys0I9xkRQsH0iXmxjtRnn5Dwf3AK"
+                    }
+                }
+            )
+            .then(response => 
+            {
+                if (!response.ok) 
+                {
+                    throw new Error('Network response was not ok');
+                }
+
+                return response.json();
+            })
+            .then(data => 
+            {
+                xListaTotal.innerHTML = "";
+                // Percorre os tipos de usuário e suas contagens
+                data.results.forEach(result => 
+                {
+                    // Cria um elemento <li> para cada tipo de usuário
+                    const li = document.createElement('li');
+                    li.textContent = `${result.UserType}: ${result.TotCount}`;
+
+                    // Adiciona o <li> à <ul>
+                    xListaTotal.appendChild(li);
+                });
+            })
+            .catch(error => 
+            {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        }
+
+
+
+
+
+
+
+
+
+
+
+        function Proc_Carrega_Hist() 
+        {
+            fetch("https://api.baserow.io/api/database/rows/table/314642/?user_field_names=true&size=10",
+                {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Token Kaljys0I9xkRQsH0iXmxjtRnn5Dwf3AK"
+                    }
+                }
+            )
+            .then(response => 
+            {
+                if (!response.ok) 
+                {
+                    throw new Error('Network response was not ok');
+                }
+
+                return response.json();
+            })
+            .then(data => 
+            {                                                                                
+                xListaHist.innerHTML = "";
+                // Percorre os tipos de usuário e suas contagens
+                data.results.forEach(result => 
+                {
+                    // Cria um elemento <li> para cada tipo de usuário
+                    const li = document.createElement('li');
+                    li.textContent = `[${result.DataHora}] - ${result.UserType} - ${result.UserName}`;
+
+                    // Adiciona o <li> à <ul>
+                    xListaHist.appendChild(li);
+                });
+            })
+            .catch(error => 
+            {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        }
+
+
+
+
+
+        function success(p_ReadValue)
+        {
+            scanner.clear();
+            Proc_Valida(p_ReadValue, "UserNum");
+        }
+
+        
+
         function error(err) {
-            console.error(err);
+            //console.error(err);
             // Prints any errors to the console
         }
-    
+
+
+
+
+
+        
+        
+        function Proc_Valida(p_ReadValue, p_ColumPesq) 
+        {
+            Proc_DB_VerificaUser(p_ReadValue, p_ColumPesq, (p_ResultVerifica)=>
+            {
+                if(!p_ResultVerifica.Estado)
+                {
+                    Proc_MostraResult("Erro", p_ResultVerifica.Error, "#FF0000");
+                    return;
+                }
+                
+
+                Proc_DB_Regista(p_ResultVerifica.Data, (p_ResultReg)=>
+                {
+                    if(!p_ResultReg.Estado)
+                    {
+                        Proc_MostraResult("Erro", p_ResultReg.Error, "#FF0000");
+                        return;
+                    }
+
+                    Proc_MostraResult(p_ResultVerifica.Data.UserName, p_ResultVerifica.Data.UserType, p_ResultVerifica.Data.UserColor);
+                    Proc_TotaisRegista(p_ResultVerifica.Data.UserType);
+                });
+            });
+           
+        }
+        
+
+
+
+
+
+
+
+
+
+        function Proc_DB_VerificaUser(p_Pesq, p_ColumPesq, p_Result)
+        {                        
+            fetch("https://api.baserow.io/api/database/rows/table/304269/?user_field_names=true&filter__" + p_ColumPesq + "__equal=" + p_Pesq,
+                {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Token Kaljys0I9xkRQsH0iXmxjtRnn5Dwf3AK"
+                    }
+                }
+            )
+            .then(response => 
+            {
+                if (!response.ok) 
+                {
+                    p_Result({
+                        Estado: false,
+                        Error: 'Erro no pedido á base de dados'
+                    });
+                }
+
+                return response.json();
+            })
+            .then(data => 
+            {
+                if(data.results.length === 0)
+                {                    
+                    p_Result({
+                        Estado: false,
+                        Error: 'Registo não foi encontrado'
+                    });
+                }
+                else
+                {                    
+                    p_Result({
+                        Estado: true,
+                        Data: data.results[0]
+                    });
+                }
+            })
+            .catch(error => 
+            {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+        function Proc_DB_Regista(p_User, p_Result)
+        {
+            const data = {
+                "DataHora": new Date().toLocaleString("pt-pt"),
+                "UserNum": p_User.UserNum,
+                "UserType": p_User.UserType,
+                "UserName": p_User.UserName
+            };
+
+
+
+
+            /*Pesquisa Total para depois inserir*/
+            fetch("https://api.baserow.io/api/database/rows/table/314642/?user_field_names=true",
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Token Kaljys0I9xkRQsH0iXmxjtRnn5Dwf3AK",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                }
+            )
+            .then(response => 
+            {
+                if (!response.ok) 
+                {                    
+                    p_Result({
+                        Estado: false,
+                        Error: "Não consegui realizar o registo"
+                    });
+                }
+
+                return response.json();
+            })
+            .then(data => 
+            {               
+               p_Result({
+                        Estado: true
+                });
+            })
+            .catch(error => 
+            {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        }
+
+
+
+
+
+
+
+
+
+
+
+        function Proc_TotaisRegista(p_UserType)
+        {
+            Proc_TotaisBuscaTipo(p_UserType, (p_Result)=>
+            {
+                if(p_Result.Estado)
+                {
+                    p_Result.Data.TotCount = String((Number(p_Result.Data.TotCount) + 1));
+                    Proc_TotaisAtualiza(p_Result.Data, (p_ResultUpdate)=>
+                    {
+                        Proc_Carrega_Totais();
+                    });
+                }
+                else
+                {
+                    Proc_TotaisCriaTipo(p_UserType, (p_ResultInsert)=>
+                    {
+                        Proc_Carrega_Totais();
+                    });
+                }
+            });
+        }
+
+
+
+
+
+
+
+
+        function Proc_TotaisBuscaTipo(p_UserType, p_Result) 
+        {
+            fetch("https://api.baserow.io/api/database/rows/table/316163/?user_field_names=true&filter__UserType__equal=" + p_UserType,
+                {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Token Kaljys0I9xkRQsH0iXmxjtRnn5Dwf3AK"
+                    }
+                }
+            )
+            .then(response => 
+            {
+                if (!response.ok) 
+                {
+                    p_Result({
+                        Estado: false,
+                        Error: 'Erro no pedido á base de dados'
+                    });
+                }
+
+                return response.json();
+            })
+            .then(data => 
+            {
+                if(data.results.length === 0)
+                {                    
+                    p_Result({
+                        Estado: false,
+                        Error: 'Registo não foi encontrado'
+                    });
+                }
+                else
+                {                    
+                    p_Result({
+                        Estado: true,
+                        Data: data.results[0]
+                    });
+                }
+            })
+            .catch(error => 
+            {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        }
+
+
+
+
+
+
+
+        function Proc_TotaisAtualiza(p_TotType, p_Result) 
+        {
+            const data = {
+                UserType: p_TotType.UserType,
+                TotCount: p_TotType.TotCount                
+            };
+
+
+
+
+            /*Pesquisa Total para depois inserir*/
+            fetch("https://api.baserow.io/api/database/rows/table/316163/" + p_TotType.id + "/?user_field_names=true",
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Authorization": "Token Kaljys0I9xkRQsH0iXmxjtRnn5Dwf3AK",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                }
+            )
+            .then(response => 
+            {
+                if (!response.ok) 
+                {                    
+                    p_Result({
+                        Estado: false,
+                        Error: "Não consegui realizar o registo"
+                    });
+                }
+
+                return response.json();
+            })
+            .then(data => 
+            {
+               p_Result({
+                        Estado: true
+                });
+            })
+            .catch(error => 
+            {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        }
+
+
+
+
+
+
+
+
+
+        function Proc_TotaisCriaTipo(p_UserType, p_Result) 
+        {
+            const data = {                
+                "UserType": p_UserType,
+                "TotCount": "1"
+            };
+
+
+
+
+            /*Pesquisa Total para depois inserir*/
+            fetch("https://api.baserow.io/api/database/rows/table/316163/?user_field_names=true",
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Token Kaljys0I9xkRQsH0iXmxjtRnn5Dwf3AK",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                }
+            )
+            .then(response => 
+            {
+                if (!response.ok) 
+                {                    
+                    p_Result({
+                        Estado: false,
+                        Error: "Não consegui realizar o registo"
+                    });
+                }
+
+                return response.json();
+            })
+            .then(data => 
+            {               
+               p_Result({
+                        Estado: true
+                });
+            })
+            .catch(error => 
+            {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        }
+
+
+
+
+
+
+
+
+        function Proc_MostraResult(p_Titulo, p_Texto, p_Cor)
+        {
+            xtbReader.style.display = "none";
+            xResultColor.style.display = "block";
+            xResultColor.style.background = p_Cor;
+            xResultUser.innerText = p_Titulo;
+            xResultType.innerText = p_Texto;
+
+            setTimeout(()=>
+            {
+                Proc_Init_Reg(xCbUsaCamara.checked);
+            }, 3000);
+        }
+
+
+        
+
+        
+
     </script>
     
 </body>
